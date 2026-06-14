@@ -9,6 +9,7 @@ import { connectDB } from './lib/db.js'
 
 import fs from 'fs'
 import path from 'path'
+import job from './lib/cron.js'
 
 const app = express()
 
