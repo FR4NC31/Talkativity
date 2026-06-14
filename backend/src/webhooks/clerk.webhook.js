@@ -1,61 +1,53 @@
-import express from 'express'
-import User from '../models/user.model.js'
-import {verifyWebhook} from '@clerk/backend/webhooks'
+import express from "express";
+import User from "../models/user.model.js";
+import { verifyWebhook } from "@clerk/backend/webhooks";
 
-const router = express.Router() 
+const router = express.Router();
 
 router.post("/", async (req, res) => {
-   try {
-     const signingSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET
-    if(!signingSecret){
-        res.status(503).json({ message: "Webhook secret is not provided" })
-        return
+  try {
+    const signingSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+    if (!signingSecret) {
+      res.status(503).json({ message: "Webhook secret is not provided" });
+      return;
     }
 
-    const payload = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : String(req.body)
+    // clerk's verifier expects a Web Request with the raw body; express.raw gives a Buffer.
+    const payload = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : String(req.body);
     const request = new Request("http://internal/webhooks/clerk", {
-        method: "POST",
-        headers: new Headers(req.headers),
-        body: payload
-    })
+      method: "POST",
+      headers: new Headers(req.headers),
+      body: payload,
+    });
 
-    const evt = await verifyWebhook(request, { signingSecret })
+    const evt = await verifyWebhook(request, { signingSecret });
 
-    if(evt.type === "user.created" || evt.type === "user.updated"){
-     const u = evt.data
-     
-     const email = 
-     u.emailAddress?.find((e) => e.id === u.primary_email_address_id)?.email_address ??
-     u.emailAddress?.[0]?.emailAddress
+    if (evt.type === "user.created" || evt.type === "user.updated") {
+      const u = evt.data;
 
-     const fullName = 
-     [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || email?.split("@")
-     [0]
+      const email =
+        u.email_addresses?.find((e) => e.id === u.primary_email_address_id)?.email_address ??
+        u.email_addresses?.[0]?.email_address;
 
-      const user = await User.findOneAndUpdate(
-         { clerkId: u.id },
-         { clerkId: u.id, email, fullName, profilePic: u.imageUrl },
-         { new: true, upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-      )
+      const fullName =
+        [u.first_name, u.last_name].filter(Boolean).join(" ") || u.username || email?.split("@")[0];
 
-       if(evt.type === "user.created"){
-          console.log(`User created successfully: ${user?.fullName || fullName}`)
-       }
-
-       res.status(200).json({received: true})
-      }
-
-    if(evt.type === "user.deleted"){
-        if(evt.data.id) await User.findOneAndDelete({clerkId: evt.data.id})
-        
-        res.status(200).json({received: true})
+      await User.findOneAndUpdate(
+        { clerkId: u.id },
+        { clerkId: u.id, email, fullName, profilePic: u.image_url },
+        { new: true, upsert: true, setDefaultsOnInsert: true },
+      );
     }
-   } catch (error) {
-    console.log("Error in Clerk Webhook", error)
-    res.status(500).json({message: "Webhook verification failed"})
-   }
 
-})
+    if (evt.type === "user.deleted") {
+      if (evt.data.id) await User.findOneAndDelete({ clerkId: evt.data.id });
+    }
 
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error("Error in Clerk webhook:", error);
+    res.status(400).json({ message: "Webhook verification failed" });
+  }
+});
 
-export default router   
+export default router;
