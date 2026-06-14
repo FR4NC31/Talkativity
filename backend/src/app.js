@@ -30,6 +30,8 @@ app.get("/health", (req, res) => {
     res.status(200).json({ok: true})
 })
 
+
+
 if(fs.existsSync(publicDir)) {
     app.use(express.static(publicDir))
 

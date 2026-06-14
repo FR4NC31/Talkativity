@@ -32,12 +32,18 @@ router.post("/", async (req, res) => {
      [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || email?.split("@")
      [0]
 
-     await User.findOneAndUpdate(
-        { clerkId: u.id },
-        { clerkId: u.id, email, fullName, profilePic: u.imageUrl },
-        { new: true, upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-     )
-    }
+      const user = await User.findOneAndUpdate(
+         { clerkId: u.id },
+         { clerkId: u.id, email, fullName, profilePic: u.imageUrl },
+         { new: true, upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
+      )
+
+       if(evt.type === "user.created"){
+          console.log(`User created successfully: ${user?.fullName || fullName}`)
+       }
+
+       res.status(200).json({received: true})
+      }
 
     if(evt.type === "user.deleted"){
         if(evt.data.id) await User.findOneAndDelete({clerkId: evt.data.id})
