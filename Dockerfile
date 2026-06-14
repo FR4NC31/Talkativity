@@ -4,7 +4,7 @@
 # Produces static HTML/JS/CSS under frontend/dist.
 FROM node:22-bookworm-slim AS frontend-build
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/package.json ./
 RUN npm install --no-audit --no-fund --legacy-peer-deps
 COPY frontend/ ./
 # Empty = browser calls /api on the same host as the page.
@@ -18,7 +18,7 @@ RUN npm run build
 # This backend is ESM JavaScript, so npm run build copies src/ to dist/.
 FROM node:22-bookworm-slim AS backend-build
 WORKDIR /app
-COPY backend/package.json backend/package-lock.json ./
+COPY backend/package.json ./
 RUN npm install --no-audit --no-fund
 COPY backend/ ./
 RUN npm run build
@@ -30,7 +30,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
 
-COPY backend/package.json backend/package-lock.json ./
+COPY backend/package.json ./
 RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY --from=backend-build /app/dist ./dist
