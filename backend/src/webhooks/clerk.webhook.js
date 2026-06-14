@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
      await User.findOneAndUpdate(
         { clerkId: u.id },
         { clerkId: u.id, email, fullName, profilePic: u.imageUrl },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
+        { new: true, upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
      )
     }
 
