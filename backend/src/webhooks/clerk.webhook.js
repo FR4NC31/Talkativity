@@ -24,13 +24,17 @@ router.post("/", async (req, res) => {
       const fullName =
         [u.first_name, u.last_name].filter(Boolean).join(" ") || u.username || email.split("@")[0];
 
-      await User.findOneAndUpdate(
+      const savedUser = await User.findOneAndUpdate(
         { clerkId: u.id },
         { clerkId: u.id, email, fullName, profilePic: u.image_url },
-        { new: true, upsert: true, setDefaultsOnInsert: true },
+        { returnDocument: "after", upsert: true, setDefaultsOnInsert: true },
       );
 
-      console.log(`Clerk webhook: ${evt.type} — ${email} (${u.id})`);
+      if (savedUser) {
+        console.log(`Clerk webhook: ${evt.type} — data saved for ${email} (${u.id})`);
+      } else {
+        console.error(`Clerk webhook: ${evt.type} — FAILED to save data for ${email} (${u.id})`);
+      }
     }
 
     if (evt.type === "user.deleted") {
