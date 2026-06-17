@@ -115,6 +115,7 @@ export const useChatStore = create(
         }));
       },
 
+      setMessages: (messages) => set({ messages }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setSidebarTab: (sidebarTab) => set({ sidebarTab }),
       setComposerText: (composerText) => set({ composerText }),

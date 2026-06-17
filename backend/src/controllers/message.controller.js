@@ -35,9 +35,13 @@ export async function getConversationsForSidebar(req, res) {
       { $sort: { lastMessageAt: -1 } },
       // 4. Look up each partner's user profile (comes back as an array).
       { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
-      // 5. Pull that profile out of the array and make it the document.
-      { $replaceRoot: { newRoot: { $first: "$user" } } },
-      // 6. Hide the private clerkId field from the result.
+      // 5. Drop conversations where the partner user no longer exists (e.g. deleted account).
+      { $match: { "user.0": { $exists: true } } },
+      // 6. Unwind the user array into the root document.
+      { $unwind: "$user" },
+      // 7. Replace the root with the user document.
+      { $replaceRoot: { newRoot: "$user" } },
+      // 8. Hide the private clerkId field from the result.
       { $project: { clerkId: 0 } },
     ]);
 
@@ -69,7 +73,7 @@ export async function getMessages(req, res) {
 
 export async function sendMessage(req, res) {
   try {
-    const { text } = req.body;
+    const { text, type, callStatus, callDuration, callType } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -89,9 +93,13 @@ export async function sendMessage(req, res) {
     const newMessage = new Message({
       senderId,
       receiverId,
-      text,
+      text: text || "",
       image: imageUrl,
       video: videoUrl,
+      type: type || "text",
+      callStatus,
+      callDuration,
+      callType,
     });
 
     await newMessage.save();

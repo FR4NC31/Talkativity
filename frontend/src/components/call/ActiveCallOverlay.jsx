@@ -27,12 +27,14 @@ export function ActiveCallOverlay() {
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
+      console.log("[WebRTC] Attaching remote stream to video element");
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
+      console.log("[WebRTC] Attaching local stream to video element");
       localVideoRef.current.srcObject = localStream;
     }
   }, [localStream]);

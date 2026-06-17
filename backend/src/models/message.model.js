@@ -21,6 +21,22 @@ const messageSchema = new mongoose.Schema(
     video: {
       type: String,
     },
+    type: {
+      type: String,
+      enum: ["text", "call"],
+      default: "text",
+    },
+    callStatus: {
+      type: String,
+      enum: ["missed", "ended"],
+    },
+    callDuration: {
+      type: Number,
+    },
+    callType: {
+      type: String,
+      enum: ["audio", "video"],
+    },
   },
   { timestamps: true },
 );

@@ -41,6 +41,18 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    socket.on("connect", () => {
+      console.log("[Socket] Connected:", socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("[Socket] Connection error:", err.message);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("[Socket] Disconnected:", reason);
+    });
   },
 
   disconnectSocket: () => {
