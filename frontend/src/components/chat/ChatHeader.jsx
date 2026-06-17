@@ -1,5 +1,5 @@
 import { Avatar, Button } from "@heroui/react";
-import { ChevronLeftIcon, Volume2Icon, VolumeXIcon, XIcon } from "lucide-react";
+import { ChevronLeftIcon, PhoneIcon, VideoIcon, Volume2Icon, VolumeXIcon, XIcon } from "lucide-react";
 import { AppLogo } from "../AppLogo";
 import { AvatarWithOnlineIndicator } from "./AvatarWithOnlineIndicator";
 
@@ -9,14 +9,16 @@ import { ThemeToggle } from "../ThemeToggle";
 import { WallpaperPicker } from "../WallpaperPicker";
 
 import { useChatStore } from "../../store/useChatStore";
+import { useCallStore } from "../../store/useCallStore";
 import { useSelectedConversation } from "../../hooks/useSelectedConversation";
 
 export function ChatHeader() {
   const isSoundEnabled = useChatStore((state) => state.isSoundEnabled);
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
   const setSoundEnabled = useChatStore((state) => state.setSoundEnabled);
+  const startCall = useCallStore((state) => state.startCall);
 
-  const { activeConversation, isLargeScreen } = useSelectedConversation();
+  const { activeConversation, activeConversationId, isLargeScreen } = useSelectedConversation();
 
   return (
     <header className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-1.5 py-1.5 sm:gap-2 sm:px-2 sm:py-2">
@@ -92,16 +94,58 @@ export function ChatHeader() {
         </Button>
 
         {activeConversation ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            isIconOnly
-            className="shrink-0"
-            aria-label="Close chat"
-            onPress={() => setActiveConversationId(null)}
-          >
-            <XIcon className="size-5.5" strokeWidth={2} aria-hidden />
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              isIconOnly
+              className="shrink-0"
+              aria-label="Audio call"
+              onPress={() =>
+                startCall(
+                  {
+                    userId: activeConversationId,
+                    name: activeConversation.peer.name,
+                    avatarUrl: activeConversation.peer.avatarUrl,
+                    initials: activeConversation.peer.initials,
+                  },
+                  false,
+                )
+              }
+            >
+              <PhoneIcon className="size-5.5" strokeWidth={2} aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              isIconOnly
+              className="shrink-0"
+              aria-label="Video call"
+              onPress={() =>
+                startCall(
+                  {
+                    userId: activeConversationId,
+                    name: activeConversation.peer.name,
+                    avatarUrl: activeConversation.peer.avatarUrl,
+                    initials: activeConversation.peer.initials,
+                  },
+                  true,
+                )
+              }
+            >
+              <VideoIcon className="size-5.5" strokeWidth={2} aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              isIconOnly
+              className="shrink-0"
+              aria-label="Close chat"
+              onPress={() => setActiveConversationId(null)}
+            >
+              <XIcon className="size-5.5" strokeWidth={2} aria-hidden />
+            </Button>
+          </>
         ) : null}
       </div>
     </header>

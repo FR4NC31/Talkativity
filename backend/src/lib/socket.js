@@ -29,6 +29,49 @@ io.on("connection", (socket) => {
     if (userId) delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
+
+  // WebRTC signaling
+  socket.on("call:offer", ({ to, offer, peerInfo, isVideo }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call:incoming", { from: userId, offer, peerInfo, isVideo });
+    }
+  });
+
+  socket.on("call:answer", ({ to, answer }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call:answered", { from: userId, answer });
+    }
+  });
+
+  socket.on("call:ice-candidate", ({ to, candidate }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call:ice-candidate", { from: userId, candidate });
+    }
+  });
+
+  socket.on("call:end", ({ to }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call:ended", { from: userId });
+    }
+  });
+
+  socket.on("call:busy", ({ to }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call:busy", { from: userId });
+    }
+  });
+
+  socket.on("call:rejected", ({ to }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call:rejected", { from: userId });
+    }
+  });
 });
 
 export { app, server, io, getReceiverSocketId };

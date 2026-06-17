@@ -1,11 +1,14 @@
 import { useWallpaper } from "../context/wallpaper";
 import { useChatStore } from "../store/useChatStore";
+import { useCallStore } from "../store/useCallStore";
 import { useSelectedConversation } from "../hooks/useSelectedConversation";
 import { useEffect } from "react";
 import ChatSidebar from "../components/chat/ChatSidebar";
 import { ChatHeader } from "../components/chat/ChatHeader";
 import { MessageList } from "../components/chat/MessageList";
 import { ChatComposer } from "../components/chat/ChatComposer";
+import { IncomingCallModal } from "../components/call/IncomingCallModal";
+import { ActiveCallOverlay } from "../components/call/ActiveCallOverlay";
 
 function ChatPage() {
   const { frameStyle } = useWallpaper();
@@ -15,6 +18,8 @@ function ChatPage() {
   const getUsers = useChatStore((state) => state.getUsers);
   const subscribeToMessages = useChatStore((state) => state.subscribeToMessages);
   const unsubscribeFromMessages = useChatStore((state) => state.unsubscribeFromMessages);
+
+  const callStatus = useCallStore((state) => state.status);
 
   const { activeConversation, activeConversationId, isLargeScreen } = useSelectedConversation();
 
@@ -35,7 +40,7 @@ function ChatPage() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden p-2 sm:p-3 md:p-8" style={frameStyle}>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 overflow-hidden rounded-2xl border border-border bg-background text-foreground">
+      <div className="relative mx-auto flex w-full max-w-6xl flex-1 overflow-hidden rounded-2xl border border-border bg-background text-foreground">
         <ChatSidebar />
 
         <div
@@ -48,6 +53,9 @@ function ChatPage() {
 
           {activeConversation ? <ChatComposer /> : null}
         </div>
+
+        {callStatus === "ringing" ? <IncomingCallModal /> : null}
+        {callStatus === "calling" || callStatus === "connected" ? <ActiveCallOverlay /> : null}
       </div>
     </div>
   );

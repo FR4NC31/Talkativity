@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage";
 import { useAuth } from "@clerk/react";
 import PageLoader from "./components/PageLoader";
 import { useAuthStore } from "./store/useAuthStore";
+import { useCallStore } from "./store/useCallStore";
 import { useEffect } from "react";
 
 import { Toaster } from "react-hot-toast";
@@ -20,6 +21,9 @@ function App() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isCheckingAuth = useAuthStore((state) => state.isCheckingAuth);
+  const socket = useAuthStore((state) => state.socket);
+  const setupCallListeners = useCallStore((state) => state.setupListeners);
+  const removeCallListeners = useCallStore((state) => state.removeListeners);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -27,6 +31,12 @@ function App() {
     if (isSignedIn) checkAuth();
     else clearAuth();
   }, [checkAuth, clearAuth, isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (!socket) return;
+    setupCallListeners();
+    return () => removeCallListeners();
+  }, [socket, setupCallListeners, removeCallListeners]);
 
   if (!isLoaded || (isSignedIn && isCheckingAuth)) return <PageLoader />;
 
