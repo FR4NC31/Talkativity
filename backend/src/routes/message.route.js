@@ -1,15 +1,20 @@
-import express from 'express'
-import { getConversationsForSidebar, getMessages, getUsersForSidebar, sendMessage } from '../controllers/message.controller.js'
-import { protectRoute } from '../middlewares/auth.middleware.js'
-import { upload } from '../middlewares/upload.middleware.js'
+import express from "express";
+import {
+  getConversationsForSidebar,
+  getMessages,
+  getUsersForSidebar,
+  sendMessage,
+} from "../controllers/message.controller.js";
+import { protectRoute } from "../middleware/auth.middleware.js";
+import { upload } from "../middleware/upload.middleware.js";
 
-const router = express.Router()
+const router = express.Router();
 
-router.use(protectRoute)
+router.use(protectRoute);
 
-router.get('/users', getUsersForSidebar)
-router.get('/conversations', getConversationsForSidebar)
-router.get('/:id', getMessages)
-router.post('/send/:id', upload.single("media"), sendMessage)
+router.get("/users", getUsersForSidebar);
+router.get("/conversations", getConversationsForSidebar);
+router.get("/:id", getMessages);
+router.post("/send/:id", upload.single("media"), sendMessage);
 
-export default router
+export default router;

@@ -10,18 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@clerk/react": "^6.9.1",
+    "@clerk/react": "^6.7.3",
     "@heroui/react": "^3.1.0",
     "@heroui/styles": "^3.1.0",
-    "@tailwindcss/vite": "^4.3.1",
-    "axios": "^1.18.0",
-    "lucide-react": "^1.18.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "axios": "^1.17.0",
+    "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hot-toast": "^2.6.0",
     "react-router": "^7.17.0",
     "socket.io-client": "^4.8.3",
-    "tailwindcss": "^4.3.1",
+    "tailwindcss": "^4.3.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

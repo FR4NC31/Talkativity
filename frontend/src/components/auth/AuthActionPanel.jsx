@@ -54,7 +54,7 @@ export function AuthActionPanel() {
             onPress={() => {
               clerk.openSignIn({ fallbackRedirectUrl: AFTER_AUTH, forceRedirectUrl: AFTER_AUTH });
             }}
-          > 
+          >
             <span className="relative z-1 flex items-center justify-center gap-2">
               Continue
               <ArrowRightIcon
