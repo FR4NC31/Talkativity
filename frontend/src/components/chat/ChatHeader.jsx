@@ -19,6 +19,7 @@ export function ChatHeader() {
   const startCall = useCallStore((state) => state.startCall);
 
   const { activeConversation, activeConversationId, isLargeScreen } = useSelectedConversation();
+  const isOtherTyping = useChatStore((s) => s.isOtherTyping);
 
   return (
     <header className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-1.5 py-1.5 sm:gap-2 sm:px-2 sm:py-2">
@@ -53,7 +54,9 @@ export function ChatHeader() {
               {activeConversation.peer.name}
             </p>
             <p className="truncate text-xs text-muted">
-              {activeConversation.peer.isOnline ? (
+              {isOtherTyping ? (
+                <span className="font-medium text-accent">{activeConversation.peer.name.split(" ")[0]} is typing...</span>
+              ) : activeConversation.peer.isOnline ? (
                 <span className="font-medium text-success">Online</span>
               ) : (
                 "Offline"

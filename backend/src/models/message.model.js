@@ -37,6 +37,13 @@ const messageSchema = new mongoose.Schema(
       type: String,
       enum: ["audio", "video"],
     },
+    editedAt: {
+      type: Date,
+    },
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+    },
   },
   { timestamps: true },
 );

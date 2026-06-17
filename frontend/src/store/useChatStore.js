@@ -21,6 +21,8 @@ export const useChatStore = create(
       composerText: "",
       isSoundEnabled: true,
       isSendingMedia: false,
+      replyingTo: null,
+      isOtherTyping: false,
 
       getUsers: async () => {
         set({ isUsersLoading: true });
@@ -66,12 +68,20 @@ export const useChatStore = create(
       },
 
       sendMessage: async (messageData) => {
-        const { selectedUser, messages } = get();
+        const { selectedUser } = get();
         if (!selectedUser) return false;
 
         try {
           const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-          set({ messages: [...messages, res.data], composerText: "" });
+          // read fresh state after the await to avoid racing with socket events
+          const { messages } = get();
+          const exists = messages.some((m) => String(m._id) === String(res.data._id));
+          if (!exists) {
+            get().setMessages([...messages, res.data]);
+            set({ composerText: "" });
+          } else {
+            set({ composerText: "" });
+          }
           get().getConversations();
           return true;
         } catch (error) {
@@ -87,19 +97,89 @@ export const useChatStore = create(
         if (!socket) return;
 
         socket.off("newMessage");
+        socket.off("message:edited");
+        socket.off("message:deleted");
+
         socket.on("newMessage", (newMessage) => {
-          // if im not the receiver don't do anything just return
-          if (String(newMessage.senderId) !== String(userId)) return;
-
-          set({ messages: [...get().messages, newMessage] });
-
           get().getConversations();
+
+          const isRelevant =
+            String(newMessage.senderId) === String(userId) ||
+            String(newMessage.receiverId) === String(userId);
+
+          if (!isRelevant) return;
+
+          const exists = get().messages.some(
+            (m) => String(m._id) === String(newMessage._id),
+          );
+          if (!exists) {
+            get().setMessages([...get().messages, newMessage]);
+          }
+        });
+
+        socket.on("message:edited", (edited) => {
+          const isRelevant =
+            String(edited.senderId) === String(userId) ||
+            String(edited.receiverId) === String(userId);
+          if (!isRelevant) return;
+
+          const { messages } = get();
+          get().setMessages(
+            messages.map((m) => (String(m._id) === String(edited._id) ? edited : m)),
+          );
+        });
+
+        socket.on("message:deleted", ({ _id }) => {
+          const { messages } = get();
+          get().setMessages(messages.filter((m) => String(m._id) !== String(_id)));
         });
       },
 
       unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
-        socket?.off("newMessage");
+        if (!socket) return;
+        socket.off("newMessage");
+        socket.off("message:edited");
+        socket.off("message:deleted");
+      },
+
+      subscribeToTyping: (userId) => {
+        if (!userId) return;
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        socket.off("typing:start");
+        socket.off("typing:stop");
+
+        socket.on("typing:start", ({ from }) => {
+          if (String(from) === String(userId)) {
+            set({ isOtherTyping: true });
+          }
+        });
+
+        socket.on("typing:stop", ({ from }) => {
+          if (String(from) === String(userId)) {
+            set({ isOtherTyping: false });
+          }
+        });
+      },
+
+      unsubscribeFromTyping: () => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+        socket.off("typing:start");
+        socket.off("typing:stop");
+        set({ isOtherTyping: false });
+      },
+
+      emitTypingStart: (conversationId) => {
+        const socket = useAuthStore.getState().socket;
+        if (socket) socket.emit("typing:start", { to: conversationId });
+      },
+
+      emitTypingStop: (conversationId) => {
+        const socket = useAuthStore.getState().socket;
+        if (socket) socket.emit("typing:stop", { to: conversationId });
       },
 
       setSelectedUser: (selectedUser) => set({ selectedUser }),
@@ -115,17 +195,62 @@ export const useChatStore = create(
         }));
       },
 
-      setMessages: (messages) => set({ messages }),
+      setMessages: (messages) => {
+        const seen = new Set();
+        set({
+          messages: messages.filter((m) => {
+            const key = String(m._id);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }),
+        });
+      },
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setSidebarTab: (sidebarTab) => set({ sidebarTab }),
       setComposerText: (composerText) => set({ composerText }),
       setSoundEnabled: (isSoundEnabled) => set({ isSoundEnabled }),
+      setReplyingTo: (replyingTo) => set({ replyingTo }),
+
+      editMessage: async (messageId, newText) => {
+        try {
+          const res = await axiosInstance.put(`/messages/${messageId}`, { text: newText });
+          const { messages } = get();
+          get().setMessages(
+            messages.map((m) => (String(m._id) === String(messageId) ? res.data : m)),
+          );
+          return true;
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Failed to edit message");
+          return false;
+        }
+      },
+
+      deleteMessage: async (messageId) => {
+        try {
+          await axiosInstance.delete(`/messages/${messageId}`);
+          const { messages } = get();
+          get().setMessages(messages.filter((m) => String(m._id) !== String(messageId)));
+          get().getConversations();
+          return true;
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Failed to delete message");
+          return false;
+        }
+      },
 
       sendTextMessage: async (conversationId) => {
         const messageText = get().composerText.trim();
         if (!conversationId || !messageText) return false;
 
-        return get().sendMessage({ text: messageText });
+        const { replyingTo } = get();
+        const payload = replyingTo
+          ? { text: messageText, replyTo: replyingTo.id }
+          : { text: messageText };
+
+        set({ replyingTo: null });
+        get().emitTypingStop(conversationId);
+        return get().sendMessage(payload);
       },
 
       sendMediaMessage: async ({ conversationId, file }) => {

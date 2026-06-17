@@ -73,7 +73,7 @@ export async function getMessages(req, res) {
 
 export async function sendMessage(req, res) {
   try {
-    const { text, type, callStatus, callDuration, callType } = req.body;
+    const { text, type, callStatus, callDuration, callType, replyTo } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -100,19 +100,86 @@ export async function sendMessage(req, res) {
       callStatus,
       callDuration,
       callType,
+      replyTo: replyTo || undefined,
     });
 
     await newMessage.save();
 
+    // emit to receiver
     const receiverSocketId = getReceiverSocketId(receiverId);
-    // only send the message in realtime if user is online
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+    // also emit to sender for multi-tab/session support
+    const senderSocketId = getReceiverSocketId(senderId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("newMessage", newMessage);
     }
 
     res.status(201).json(newMessage);
   } catch (error) {
     console.error("Error in sendMessage:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export async function editMessage(req, res) {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+
+    const message = await Message.findOne({ _id: id, senderId: userId });
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    message.text = text || "";
+    message.editedAt = new Date();
+    await message.save();
+
+    // emit to both participants
+    const senderSocketId = getReceiverSocketId(message.senderId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("message:edited", message);
+    }
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("message:edited", message);
+    }
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error in editMessage:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export async function deleteMessage(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const message = await Message.findOneAndDelete({ _id: id, senderId: userId });
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    const payload = { _id: message._id, senderId: message.senderId, receiverId: message.receiverId };
+
+    // emit to both participants
+    const senderSocketId = getReceiverSocketId(message.senderId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("message:deleted", payload);
+    }
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("message:deleted", payload);
+    }
+
+    res.status(200).json({ message: "Message deleted" });
+  } catch (error) {
+    console.error("Error in deleteMessage:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 }

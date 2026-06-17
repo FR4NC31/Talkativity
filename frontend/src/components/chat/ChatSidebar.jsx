@@ -27,8 +27,6 @@ function mapUserForList(user, onlineUsers) {
 
 function ChatSidebar() {
   const conversations = useChatStore((state) => state.conversations);
-
-  console.log(conversations);
   const users = useChatStore((state) => state.users);
 
   const searchQuery = useChatStore((state) => state.searchQuery);
@@ -40,6 +38,11 @@ function ChatSidebar() {
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
 
   const onlineUsers = useAuthStore((state) => state.onlineUsers);
+
+  console.log(`[ChatSidebar] onlineUsers:`, onlineUsers, `conversations count:`, conversations.length);
+  conversations.forEach((u) => {
+    console.log(`[ChatSidebar] user ${u.fullName} _id=${u._id} (${typeof u._id}) isOnline=${onlineUsers.includes(u._id)}`);
+  });
 
   const { activeConversationId, isLargeScreen } = useSelectedConversation();
 

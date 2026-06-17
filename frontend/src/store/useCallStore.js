@@ -44,7 +44,11 @@ export const useCallStore = create((set, get) => ({
         callType: state.isVideoCall ? "video" : "audio",
       });
       const chatStore = useChatStore.getState();
-      chatStore.setMessages([...chatStore.messages, res.data]);
+      // avoid duplicates when newMessage socket event arrived before POST response
+      const exists = chatStore.messages.some((m) => String(m._id) === String(res.data._id));
+      if (!exists) {
+        chatStore.setMessages([...chatStore.messages, res.data]);
+      }
       chatStore.getConversations();
     } catch (error) {
       console.error("[WebRTC] Failed to save call log:", error);
@@ -125,7 +129,6 @@ export const useCallStore = create((set, get) => ({
     });
     socket.on("call:rejected", () => {
       console.log("[WebRTC] Call rejected by peer");
-      get().saveCallLog("missed", 0);
       get().endCall(true);
     });
     socket.on("call:timedout", () => {
@@ -328,6 +331,10 @@ export const useCallStore = create((set, get) => ({
     const peerInfo = get().peerInfo;
     if (socket && peerInfo) {
       socket.emit("call:rejected", { to: peerInfo.userId });
+    }
+    // save call log on the rejecting side so both users see the missed-call message
+    if (peerInfo) {
+      get().saveCallLog("missed", 0);
     }
     if (get().callTimeoutId) {
       clearTimeout(get().callTimeoutId);

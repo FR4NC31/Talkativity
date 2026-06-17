@@ -1,10 +1,19 @@
+import { useEffect } from "react";
 import useScrollToBottom from "../../hooks/useScrollToBottom";
 import { MessageBubble } from "./MessageBubble";
 import { NoConversationPlaceholder } from "./NoConversationPlaceholder";
 import { useSelectedConversation } from "../../hooks/useSelectedConversation";
+import { useChatStore } from "../../store/useChatStore";
 
 export function MessageList() {
   const { activeConversation, activeConversationId } = useSelectedConversation();
+  const subscribeToTyping = useChatStore((s) => s.subscribeToTyping);
+  const unsubscribeFromTyping = useChatStore((s) => s.unsubscribeFromTyping);
+
+  useEffect(() => {
+    subscribeToTyping(activeConversationId);
+    return () => unsubscribeFromTyping();
+  }, [activeConversationId, subscribeToTyping, unsubscribeFromTyping]);
 
   const lastMessageId = activeConversation?.messages.at(-1)?.id;
   const messagesScrollRef = useScrollToBottom(activeConversationId, lastMessageId);

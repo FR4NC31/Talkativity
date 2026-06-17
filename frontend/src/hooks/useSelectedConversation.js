@@ -19,20 +19,35 @@ export function getInitials(name) {
 // 2. User → peer
 
 function mapUserToConversation({ user, messages, authUser, onlineUsers }) {
-  const mappedMessages = messages.map((message) => ({
-    id: message._id,
-    role: String(message.senderId) === String(authUser?._id) ? "me" : "them",
-    text: message.text || "",
-    time: formatMessageTime(message.createdAt),
-    imageUrl: message.image,
-    videoUrl: message.video,
-    type: message.type || "text",
-    callStatus: message.callStatus,
-    callDuration: message.callDuration,
-    callType: message.callType,
-    senderId: message.senderId,
-    receiverId: message.receiverId,
-  }));
+  const mappedMessages = messages.map((message) => {
+    const replyToMessage = message.replyTo
+      ? messages.find((m) => String(m._id) === String(message.replyTo))
+      : null;
+
+    return {
+      id: message._id,
+      role: String(message.senderId) === String(authUser?._id) ? "me" : "them",
+      text: message.text || "",
+      time: formatMessageTime(message.createdAt),
+      imageUrl: message.image,
+      videoUrl: message.video,
+      type: message.type || "text",
+      callStatus: message.callStatus,
+      callDuration: message.callDuration,
+      callType: message.callType,
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      editedAt: message.editedAt || null,
+      replyTo: message.replyTo || null,
+      replyText: replyToMessage?.text?.slice(0, 100) || "",
+      replySenderId: replyToMessage?.senderId || null,
+      replySenderName: replyToMessage
+        ? String(replyToMessage.senderId) === String(authUser?._id)
+          ? "You"
+          : user.fullName
+        : null,
+    };
+  });
 
   return {
     id: user._id,

@@ -19,27 +19,46 @@ const io = new Server(server, {
     origin: isProduction ? true : allowedOrigins,
     credentials: true,
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
-function getReceiverSocketId(userId) {
-  return userSocketMap[userId];
-}
-
-// online users map = { userId: socketId }
+// online users map = { userId: Set<socketId> }
 const userSocketMap = {};
+
+function getReceiverSocketId(userId) {
+  const sockets = userSocketMap[userId];
+  if (sockets && sockets.size > 0) {
+    return sockets.values().next().value;
+  }
+  return undefined;
+}
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
 
-  if (userId) userSocketMap[userId] = socket.id;
+  console.log(`[Socket] Connection: userId=${userId}, socketId=${socket.id}`);
+
+  if (userId) {
+    if (!userSocketMap[userId]) userSocketMap[userId] = new Set();
+    userSocketMap[userId].add(socket.id);
+  }
+
+  console.log(`[Socket] Online users:`, Object.keys(userSocketMap));
 
   // io.emit() sends event to everyone - broadcast
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // socket.on is used to listen for events
-  socket.on("disconnect", () => {
-    if (userId) delete userSocketMap[userId];
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  socket.on("disconnect", (reason) => {
+    console.log(`[Socket] Disconnect: userId=${userId}, socketId=${socket.id}, reason=${reason}`);
+    if (userId) {
+      userSocketMap[userId].delete(socket.id);
+      if (userSocketMap[userId].size === 0) delete userSocketMap[userId];
+    }
+    const remaining = Object.keys(userSocketMap);
+    console.log(`[Socket] Online users after disconnect:`, remaining);
+    io.emit("getOnlineUsers", remaining);
   });
 
   // WebRTC signaling
@@ -98,6 +117,21 @@ io.on("connection", (socket) => {
     const targetSocketId = getReceiverSocketId(to);
     if (targetSocketId) {
       io.to(targetSocketId).emit("call:timedout", { from: userId });
+    }
+  });
+
+  // typing indicator
+  socket.on("typing:start", ({ to }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("typing:start", { from: userId });
+    }
+  });
+
+  socket.on("typing:stop", ({ to }) => {
+    const targetSocketId = getReceiverSocketId(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("typing:stop", { from: userId });
     }
   });
 });
