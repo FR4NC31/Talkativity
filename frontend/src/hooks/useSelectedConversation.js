@@ -38,8 +38,13 @@ function mapUserToConversation({ user, messages, authUser, onlineUsers }) {
       senderId: message.senderId,
       receiverId: message.receiverId,
       editedAt: message.editedAt || null,
+      isSeen: Boolean(message.seenAt),
       replyTo: message.replyTo || null,
       replyText: replyToMessage?.text?.slice(0, 100) || "",
+      replyImageUrl: replyToMessage?.image || null,
+      replyVideoUrl: replyToMessage?.video || null,
+      replyCallType: replyToMessage?.callType || null,
+      replyCallStatus: replyToMessage?.callStatus || null,
       replySenderId: replyToMessage?.senderId || null,
       replySenderName: replyToMessage
         ? String(replyToMessage.senderId) === String(authUser?._id)

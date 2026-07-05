@@ -142,7 +142,15 @@ export function ChatComposer() {
             <span className="text-xs font-medium text-accent">
               {replyingTo.role === "me" ? "You" : activeConversation?.peer?.name || "Replying to"}
             </span>
-            <p className="truncate text-muted">{replyingTo.text || "Message"}</p>
+            <p className="truncate text-muted">
+              {replyingTo.type === "call"
+                ? `${replyingTo.callType === "video" ? "Video call" : "Audio call"}${replyingTo.callStatus === "missed" ? " (missed)" : ""}`
+                : replyingTo.imageUrl
+                  ? "Photo"
+                  : replyingTo.videoUrl
+                    ? "Video"
+                    : replyingTo.text || "Message"}
+            </p>
           </div>
           <button
             type="button"

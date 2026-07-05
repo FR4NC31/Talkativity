@@ -23,6 +23,7 @@ export const useChatStore = create(
       isSendingMedia: false,
       replyingTo: null,
       isOtherTyping: false,
+      unreadCount: 0,
 
       getUsers: async () => {
         set({ isUsersLoading: true });
@@ -115,6 +116,10 @@ export const useChatStore = create(
           if (!exists) {
             get().setMessages([...get().messages, newMessage]);
           }
+
+          if (String(newMessage.senderId) === String(userId)) {
+            get().emitMessagesSeen(userId);
+          }
         });
 
         socket.on("message:edited", (edited) => {
@@ -193,6 +198,7 @@ export const useChatStore = create(
             null,
           messages: activeConversationId ? state.messages : [],
         }));
+        get().resetUnread();
       },
 
       setMessages: (messages) => {
@@ -211,6 +217,23 @@ export const useChatStore = create(
       setComposerText: (composerText) => set({ composerText }),
       setSoundEnabled: (isSoundEnabled) => set({ isSoundEnabled }),
       setReplyingTo: (replyingTo) => set({ replyingTo }),
+      incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
+      resetUnread: () => set({ unreadCount: 0 }),
+      setMessagesSeen: (seenBy) => {
+        set((state) => ({
+          messages: state.messages.map((m) =>
+            String(m.receiverId) === String(seenBy) && !m.seenAt
+              ? { ...m, seenAt: new Date().toISOString() }
+              : m,
+          ),
+        }));
+      },
+      emitMessagesSeen: (conversationId) => {
+        const socket = useAuthStore.getState().socket;
+        if (socket) {
+          socket.emit("messages:seen", { conversationId });
+        }
+      },
 
       editMessage: async (messageId, newText) => {
         try {
@@ -232,6 +255,7 @@ export const useChatStore = create(
           const { messages } = get();
           get().setMessages(messages.filter((m) => String(m._id) !== String(messageId)));
           get().getConversations();
+          toast.success("Message deleted");
           return true;
         } catch (error) {
           toast.error(error.response?.data?.message || "Failed to delete message");
@@ -256,10 +280,14 @@ export const useChatStore = create(
       sendMediaMessage: async ({ conversationId, file }) => {
         if (!conversationId || !file) return false;
 
+        const { replyingTo } = get();
         const formData = new FormData();
         formData.append("media", file);
+        if (replyingTo) {
+          formData.append("replyTo", replyingTo.id);
+        }
 
-        set({ isSendingMedia: true });
+        set({ replyingTo: null, isSendingMedia: true });
         try {
           return await get().sendMessage(formData);
         } finally {

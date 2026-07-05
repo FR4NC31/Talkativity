@@ -120,6 +120,23 @@ io.on("connection", (socket) => {
     }
   });
 
+  // read receipts
+  socket.on("messages:seen", async ({ conversationId }) => {
+    const { default: Message } = await import("../models/message.model.js");
+    try {
+      await Message.updateMany(
+        { senderId: conversationId, receiverId: userId, seenAt: null },
+        { seenAt: new Date() },
+      );
+    } catch (err) {
+      console.error("[Socket] Error marking messages as seen:", err.message);
+    }
+    const targetSocketId = getReceiverSocketId(conversationId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("messages:seen", { seenBy: userId });
+    }
+  });
+
   // typing indicator
   socket.on("typing:start", ({ to }) => {
     const targetSocketId = getReceiverSocketId(to);

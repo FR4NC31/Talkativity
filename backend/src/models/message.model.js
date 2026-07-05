@@ -40,6 +40,10 @@ const messageSchema = new mongoose.Schema(
     editedAt: {
       type: Date,
     },
+    seenAt: {
+      type: Date,
+      default: null,
+    },
     replyTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",

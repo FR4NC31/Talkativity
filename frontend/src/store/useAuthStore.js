@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import { io } from "socket.io-client";
+import { useChatStore } from "./useChatStore";
 
 const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:3000" : "/";
 
@@ -72,6 +73,13 @@ export const useAuthStore = create((set, get) => ({
       console.log("[Socket] Disconnected:", reason);
       if (reason === "io server disconnect") {
         socket.connect();
+      }
+    });
+
+    socket.on("newMessage", (newMessage) => {
+      const myId = get().authUser?._id;
+      if (myId && String(newMessage.senderId) !== String(myId)) {
+        useChatStore.getState().incrementUnread();
       }
     });
 

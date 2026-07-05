@@ -123,6 +123,28 @@ export async function sendMessage(req, res) {
   }
 }
 
+export async function markMessagesAsSeen(req, res) {
+  try {
+    const { id: conversationPartnerId } = req.params;
+    const myId = req.user._id;
+
+    const result = await Message.updateMany(
+      { senderId: conversationPartnerId, receiverId: myId, seenAt: null },
+      { seenAt: new Date() },
+    );
+
+    const receiverSocketId = getReceiverSocketId(conversationPartnerId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messages:seen", { seenBy: myId });
+    }
+
+    res.status(200).json({ modifiedCount: result.modifiedCount });
+  } catch (error) {
+    console.error("Error in markMessagesAsSeen:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 export async function editMessage(req, res) {
   try {
     const { id } = req.params;

@@ -14,6 +14,7 @@ import {
   PencilIcon,
   Trash2Icon,
   CheckIcon,
+  CheckCheckIcon,
   XIcon,
 } from "lucide-react";
 
@@ -243,7 +244,7 @@ export function MessageBubble({ message }) {
           }`}
         >
           {/* reply preview */}
-          {message.replyText ? (
+          {message.replyTo ? (
             <div
               className={`mb-1.5 rounded-lg border-l-2 px-2.5 py-1.5 text-xs ${
                 isOwnMessage ? "border-accent-foreground/30 bg-accent-foreground/10" : "border-accent/30 bg-accent/5"
@@ -252,9 +253,35 @@ export function MessageBubble({ message }) {
               <p className={`truncate text-[10px] font-semibold uppercase tracking-wider ${isOwnMessage ? "text-accent-foreground/80" : "text-accent"}`}>
                 {message.replySenderName}
               </p>
-              <p className={`truncate ${isOwnMessage ? "text-accent-foreground/70" : "text-foreground/70"}`}>
-                {message.replyText}
-              </p>
+              {message.replyText ? (
+                <p className={`truncate ${isOwnMessage ? "text-accent-foreground/70" : "text-foreground/70"}`}>
+                  {message.replyText}
+                </p>
+              ) : message.replyImageUrl ? (
+                <div className="flex items-center gap-1.5">
+                  <img
+                    src={withTransform(message.replyImageUrl, "q-auto,w-auto,h-8")}
+                    alt=""
+                    className="size-7 shrink-0 rounded object-cover"
+                  />
+                  <span className="italic">Photo</span>
+                </div>
+              ) : message.replyVideoUrl ? (
+                <div className="flex items-center gap-1.5">
+                  <VideoIcon className="size-4 shrink-0" />
+                  <span className="italic">Video</span>
+                </div>
+              ) : message.replyCallType ? (
+                <div className="flex items-center gap-1.5">
+                  <PhoneIcon className="size-4 shrink-0" />
+                  <span className="italic">
+                    {message.replyCallType === "video" ? "Video call" : "Audio call"}
+                    {message.replyCallStatus === "missed" ? " (missed)" : ""}
+                  </span>
+                </div>
+              ) : (
+                <p className="italic">Message</p>
+              )}
             </div>
           ) : null}
 
@@ -375,6 +402,13 @@ export function MessageBubble({ message }) {
           >
             {message.editedAt ? <span className="text-[10px] italic">edited</span> : null}
             {message.time}
+            {isOwnMessage ? (
+              message.isSeen ? (
+                <CheckCheckIcon className="size-3.5 text-blue-400" />
+              ) : (
+                <CheckIcon className="size-3.5" />
+              )
+            ) : null}
           </p>
         </div>
       </div>

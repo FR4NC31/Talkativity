@@ -4,6 +4,7 @@ import {
   getMessages,
   getUsersForSidebar,
   sendMessage,
+  markMessagesAsSeen,
   editMessage,
   deleteMessage,
 } from "../controllers/message.controller.js";
@@ -18,6 +19,7 @@ router.get("/users", getUsersForSidebar);
 router.get("/conversations", getConversationsForSidebar);
 router.get("/:id", getMessages);
 router.post("/send/:id", upload.single("media"), sendMessage);
+router.put("/seen/:id", markMessagesAsSeen);
 router.put("/:id", editMessage);
 router.delete("/:id", deleteMessage);
 

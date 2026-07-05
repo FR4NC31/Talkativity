@@ -105,7 +105,7 @@ function ChatSidebar() {
           </SearchField>
         </div>
 
-        <Tabs.ListContainer className="shrink-0 border-b border-border px-2 pb-2 pt-1">
+        <Tabs.ListContainer className="hidden shrink-0 border-b border-border px-2 pb-2 pt-1 lg:block">
           <Tabs.List className="w-full gap-0.5">
             <Tabs.Tab id="chats" className="flex-1 justify-center gap-1.5">
               <MessageSquareIcon className="size-3.5 opacity-80" aria-hidden />
