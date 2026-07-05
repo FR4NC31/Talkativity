@@ -38,6 +38,7 @@ function mapUserToConversation({ user, messages, authUser, onlineUsers }) {
       senderId: message.senderId,
       receiverId: message.receiverId,
       editedAt: message.editedAt || null,
+      isForwarded: Boolean(message.forwarded),
       isSeen: Boolean(message.seenAt),
       replyTo: message.replyTo || null,
       replyText: replyToMessage?.text?.slice(0, 100) || "",

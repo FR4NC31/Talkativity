@@ -263,6 +263,25 @@ export const useChatStore = create(
         }
       },
 
+      forwardMessage: async (message, receiverId) => {
+        try {
+          const payload = {
+            text: message.text || "",
+            forwarded: true,
+          };
+          if (message.imageUrl) payload.imageUrl = message.imageUrl;
+          if (message.videoUrl) payload.videoUrl = message.videoUrl;
+
+          await axiosInstance.post(`/messages/send/${receiverId}`, payload);
+          get().getConversations();
+          toast.success("Message forwarded");
+          return true;
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Failed to forward message");
+          return false;
+        }
+      },
+
       sendTextMessage: async (conversationId) => {
         const messageText = get().composerText.trim();
         if (!conversationId || !messageText) return false;

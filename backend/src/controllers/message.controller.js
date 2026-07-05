@@ -73,34 +73,35 @@ export async function getMessages(req, res) {
 
 export async function sendMessage(req, res) {
   try {
-    const { text, type, callStatus, callDuration, callType, replyTo } = req.body;
+    const { text, type, callStatus, callDuration, callType, replyTo, imageUrl, videoUrl, forwarded } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    let imageUrl;
-    let videoUrl;
+    let finalImageUrl = imageUrl;
+    let finalVideoUrl = videoUrl;
 
-    if (req.file) {
+    if (!finalImageUrl && !finalVideoUrl && req.file) {
       if (!hasImageKitConfig()) {
         return res.status(500).json({ message: "Media upload is not configured" });
       }
 
       const url = await uploadChatMedia(req.file);
-      if (req.file.mimetype.startsWith("video/")) videoUrl = url;
-      else imageUrl = url;
+      if (req.file.mimetype.startsWith("video/")) finalVideoUrl = url;
+      else finalImageUrl = url;
     }
 
     const newMessage = new Message({
       senderId,
       receiverId,
       text: text || "",
-      image: imageUrl,
-      video: videoUrl,
+      image: finalImageUrl,
+      video: finalVideoUrl,
       type: type || "text",
       callStatus,
       callDuration,
       callType,
       replyTo: replyTo || undefined,
+      forwarded: forwarded || false,
     });
 
     await newMessage.save();

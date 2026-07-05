@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { withTransform } from "../../lib/imagekit";
 import { MessageVideo } from "./MessageVideo";
+import { MediaViewer } from "./MediaViewer";
+import { ForwardPicker } from "./ForwardPicker";
 import { useChatStore } from "../../store/useChatStore";
 import { useCallStore } from "../../store/useCallStore";
 import { Button, Modal, useOverlayState } from "@heroui/react";
@@ -13,6 +16,7 @@ import {
   ReplyIcon,
   PencilIcon,
   Trash2Icon,
+  ForwardIcon,
   CheckIcon,
   CheckCheckIcon,
   XIcon,
@@ -80,13 +84,23 @@ function formatDuration(seconds) {
 
 export function MessageBubble({ message }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
   const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
   const longPressTimer = useRef(null);
   const BUBBLE_LONG_PRESS_MS = 500;
 
   const deleteModal = useOverlayState();
+
+  const [viewerMedia, setViewerMedia] = useState(null);
+  const [showForwardModal, setShowForwardModal] = useState(false);
+
+  const openImageViewer = () => setViewerMedia({ url: message.imageUrl, type: "image" });
+  const openVideoViewer = () => setViewerMedia({ url: message.videoUrl, type: "video" });
+  const closeViewer = () => setViewerMedia(null);
 
   const editMessage = useChatStore((s) => s.editMessage);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
@@ -98,11 +112,32 @@ export function MessageBubble({ message }) {
   const isCallMessage = message.type === "call";
   const callAgain = useCallStore((s) => s.callAgain);
 
+  const toggleMenu = () => {
+    if (showMenu) {
+      setShowMenu(false);
+    } else {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setMenuPosition({
+          top: rect.top,
+          left: isOwnMessage ? rect.left - 144 : rect.right,
+        });
+      }
+      setShowMenu(true);
+    }
+  };
+
   // close menu on outside click
   useEffect(() => {
     if (!showMenu) return;
     const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+      if (
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target) &&
+        !dropdownRef.current?.contains(e.target)
+      ) {
+        setShowMenu(false);
+      }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -180,54 +215,72 @@ export function MessageBubble({ message }) {
   return (
     <div className={`group flex w-full ${isOwnMessage ? "justify-end" : "justify-start"}`}>
       <div className="relative max-w-[min(90%,28rem)] sm:max-w-[min(75%,28rem)]">
-        {/* 3-dot menu */}
-        <div ref={menuRef} className={`absolute top-1 z-10 ${isOwnMessage ? "-left-8" : "-right-8"}`}>
+        {/* 3-dot button */}
+        <div
+          ref={menuRef}
+          className={`absolute top-1 z-10 ${isOwnMessage ? "-left-8" : "-right-8"}`}
+        >
           <button
+            ref={buttonRef}
             type="button"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={toggleMenu}
             className="flex size-7 items-center justify-center rounded-full max-sm:hidden sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10"
             aria-label="Message actions"
           >
             <MoreHorizontalIcon className="size-4 text-muted" />
           </button>
+        </div>
 
-          {showMenu ? (
-            <div
-              className={`absolute top-0 z-50 flex w-36 flex-col overflow-hidden rounded-xl border border-border bg-background py-1 shadow-xl ${
-                isOwnMessage ? "left-0" : "right-0"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={handleReply}
-                className="flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent-soft"
+        {/* 3-dot dropdown portal */}
+        {showMenu
+          ? createPortal(
+              <div
+                ref={dropdownRef}
+                className="fixed z-[9999] flex w-36 flex-col overflow-hidden rounded-xl border border-border bg-background py-1 shadow-xl"
+                style={{ top: menuPosition.top, left: menuPosition.left }}
               >
-                <ReplyIcon className="size-4" />
-                Reply
-              </button>
-              {isOwnMessage && !isCallMessage ? (
                 <button
                   type="button"
-                  onClick={handleEdit}
+                  onClick={handleReply}
                   className="flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent-soft"
                 >
-                  <PencilIcon className="size-4" />
-                  Edit
+                  <ReplyIcon className="size-4" />
+                  Reply
                 </button>
-              ) : null}
-              {isOwnMessage ? (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="flex items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"
-                >
-                  <Trash2Icon className="size-4" />
-                  Delete
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+                {isOwnMessage && !isCallMessage ? (
+                  <button
+                    type="button"
+                    onClick={handleEdit}
+                    className="flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent-soft"
+                  >
+                    <PencilIcon className="size-4" />
+                    Edit
+                  </button>
+                ) : null}
+                {!isCallMessage ? (
+                  <button
+                    type="button"
+                    onClick={() => { setShowMenu(false); setShowForwardModal(true); }}
+                    className="flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent-soft"
+                  >
+                    <ForwardIcon className="size-4" />
+                    Forward
+                  </button>
+                ) : null}
+                {isOwnMessage ? (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="flex items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"
+                  >
+                    <Trash2Icon className="size-4" />
+                    Delete
+                  </button>
+                ) : null}
+              </div>,
+              document.body,
+            )
+          : null}
 
         <div
           onTouchStart={handleTouchStart}
@@ -285,14 +338,18 @@ export function MessageBubble({ message }) {
             </div>
           ) : null}
 
+          {message.isForwarded ? (
+            <p className="mb-1 text-[11px] font-medium italic text-muted">Forwarded</p>
+          ) : null}
           {hasImage ? (
             <img
               src={withTransform(message.imageUrl, IMAGE_TRANSFORM)}
               alt=""
-              className="mb-1.5 max-h-40 max-w-full rounded-lg object-cover sm:max-h-52 sm:rounded-xl"
+              className="mb-1.5 max-h-40 max-w-full cursor-pointer rounded-lg object-cover sm:max-h-52 sm:rounded-xl"
+              onClick={openImageViewer}
             />
           ) : null}
-          {hasVideo ? <MessageVideo src={message.videoUrl} /> : null}
+          {hasVideo ? <MessageVideo src={message.videoUrl} onClick={openVideoViewer} /> : null}
 
           {isCallMessage ? (
             <div className="flex items-center gap-2.5 py-1">
@@ -412,6 +469,19 @@ export function MessageBubble({ message }) {
           </p>
         </div>
       </div>
+
+      <MediaViewer
+        mediaUrl={viewerMedia?.url}
+        mediaType={viewerMedia?.type}
+        onClose={closeViewer}
+      />
+
+      {showForwardModal ? (
+        <ForwardPicker
+          message={message}
+          onClose={() => setShowForwardModal(false)}
+        />
+      ) : null}
 
       <Modal.Root state={deleteModal}>
         <Modal.Backdrop variant="opaque">
