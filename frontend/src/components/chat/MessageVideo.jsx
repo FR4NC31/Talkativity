@@ -1,32 +1,36 @@
+import { Play } from "lucide-react";
 import { isImageKitUrl, withTransform } from "../../lib/imagekit";
 
-// Chat videos are stored on ImageKit, so we let ImageKit optimize delivery
-// on the fly via URL transformations (compressed + sized for the bubble).
-// Note: q-auto isn't enabled for video on this account (returns 400), so use a fixed quality.
-// https://imagekit.io/docs/video-transformation
 const VIDEO_TRANSFORM = "q-80,w-640";
 const POSTER_TRANSFORM = "q-80,w-640";
 
-/** ImageKit can extract a poster frame by appending `/ik-thumbnail.jpg`. */
 function buildPosterUrl(url) {
   if (!isImageKitUrl(url)) return undefined;
   const [path] = url.split("?");
   return withTransform(`${path}/ik-thumbnail.jpg`, POSTER_TRANSFORM);
 }
 
-/** ImageKit-optimized chat video with an auto-generated poster frame. */
-export function MessageVideo({ src }) {
+export function MessageVideo({ src, onClick }) {
   const optimizedSrc = withTransform(src, VIDEO_TRANSFORM);
   const posterSrc = buildPosterUrl(src);
 
   return (
-    <video
-      src={optimizedSrc}
-      poster={posterSrc}
-      controls
-      playsInline
-      preload="metadata"
-      className="mb-1.5 max-h-52 max-w-full rounded-lg object-contain sm:max-h-64 sm:rounded-xl"
-    />
+    <div
+      onClick={onClick}
+      className="relative mb-1.5 max-h-52 max-w-full cursor-pointer overflow-hidden rounded-lg sm:max-h-64 sm:rounded-xl"
+    >
+      <video
+        src={optimizedSrc}
+        poster={posterSrc}
+        playsInline
+        preload="metadata"
+        className="max-h-52 max-w-full object-contain sm:max-h-64"
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="flex size-14 items-center justify-center rounded-full bg-black/60 text-white">
+          <Play className="size-7 fill-white" />
+        </div>
+      </div>
+    </div>
   );
 }
