@@ -67,6 +67,8 @@ npm run dev
 
 The app runs at `http://localhost:5173` (frontend) and `http://localhost:3000` (backend).
 
+and yess
+
 ### Docker
 
 ```bash
